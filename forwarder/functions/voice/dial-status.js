@@ -7,7 +7,7 @@
 // resolves the queue item if dial-result hasn't already — e.g. when the operator
 // never answered their own phone, so the target was never dialed. First writer wins.
 
-import { xmlResponse, validateTwilioSignature, parseTwilioForm } from '../../lib/twilio.js';
+import { validateTwilioSignature, parseTwilioForm } from '../../lib/twilio.js';
 import { logCall } from '../../lib/db.js';
 
 const TERMINAL_STATUSES = new Set(['completed', 'busy', 'no-answer', 'failed', 'canceled']);
@@ -40,5 +40,5 @@ export async function onRequestPost({ request, env }) {
       .run();
   }
 
-  return xmlResponse('', 204);
+  return new Response(null, { status: 204 });
 }

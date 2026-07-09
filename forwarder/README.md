@@ -102,3 +102,23 @@ moment can occasionally be assigned the same destination, because D1 has no
 `SELECT ... FOR UPDATE` and the round-robin read/write isn't fully
 serialized. At personal-scale call volume this is rare and self-corrects on
 the next call; it's called out here rather than engineered around.
+
+## Known behavioral caveats
+
+- **Withheld numbers are rejected.** A UK caller who withholds their number
+  (141 prefix) arrives with a `From` of `anonymous` or a placeholder, which
+  fails the UK E.164 check, so they get a reject/busy tone. This is a
+  side-effect of the UK-only rule plus sticky routing being keyed on the
+  caller's number. If you'd rather accept withheld callers, route them to a
+  fixed fallback destination in `functions/voice/inbound.js` (they can never
+  be sticky — there's no number to remember).
+- **Voicemail counts as answered.** On both inbound forwarding and outbound
+  dialing, Twilio's `DialCallStatus` is `completed` if *anything* answers —
+  including an answering machine. So an outbound queue item whose call went
+  to voicemail is marked `completed`, not `no-answer`. Twilio's AMD
+  (answering machine detection) can distinguish these at extra cost per
+  call; not wired in here.
+- **If the forwarded destination doesn't answer within 20s**, the caller
+  hears a short apology (via `/voice/inbound-result`) instead of dead air,
+  and the outcome is recorded in `call_log` as `forward:no-answer` /
+  `forward:busy` etc.

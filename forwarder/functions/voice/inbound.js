@@ -53,6 +53,11 @@ export async function onRequestPost({ request, env }) {
     status: 'dialing',
   });
 
-  const dialTwiml = `<Dial callerId="${xmlEscape(env.TWILIO_NUMBER)}" answerOnBridge="true" timeout="20"><Number>${xmlEscape(destination.number)}</Number></Dial>`;
+  // The action callback (/voice/inbound-result) fires after the dial attempt
+  // ends and branches on DialCallStatus — a successful call just hangs up,
+  // while busy/no-answer gets a polite message instead of dead air. It adds
+  // no latency to answered calls.
+  const actionUrl = `${new URL(request.url).origin}/voice/inbound-result`;
+  const dialTwiml = `<Dial callerId="${xmlEscape(env.TWILIO_NUMBER)}" answerOnBridge="true" timeout="20" action="${xmlEscape(actionUrl)}" method="POST"><Number>${xmlEscape(destination.number)}</Number></Dial>`;
   return xmlResponse(twiml(dialTwiml));
 }
