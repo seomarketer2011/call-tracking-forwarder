@@ -1,0 +1,16 @@
+[package]
+name = "call-maker-dialer"
+version = "1.0.0"
+description = "UK call maker auto-dialer"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "1", features = [] }
+
+[dependencies]
+tauri = { version = "1", features = ["shell-open"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
