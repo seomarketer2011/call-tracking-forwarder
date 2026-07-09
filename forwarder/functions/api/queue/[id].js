@@ -7,7 +7,14 @@ function json(data, status = 200) {
   });
 }
 
-const ALLOWED_STATUSES = new Set(['pending', 'calling', 'completed', 'failed', 'skipped']);
+const ALLOWED_STATUSES = new Set([
+  'pending',
+  'calling',
+  'completed',
+  'no-answer',
+  'failed',
+  'skipped',
+]);
 
 export async function onRequestPatch({ request, env, params }) {
   if (!requireApiKey(request, env)) return unauthorized();

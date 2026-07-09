@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS dial_queue (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   business_name TEXT,
   number TEXT NOT NULL,              -- E.164 number to dial
-  status TEXT NOT NULL DEFAULT 'pending', -- pending|calling|completed|failed|skipped
+  status TEXT NOT NULL DEFAULT 'pending', -- pending|calling|completed|no-answer|failed|skipped
   call_sid TEXT,
   notes TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

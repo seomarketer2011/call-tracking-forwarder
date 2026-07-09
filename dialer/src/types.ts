@@ -1,4 +1,10 @@
-export type QueueStatus = 'pending' | 'calling' | 'completed' | 'failed' | 'skipped';
+export type QueueStatus =
+  | 'pending'
+  | 'calling'
+  | 'completed'
+  | 'no-answer'
+  | 'failed'
+  | 'skipped';
 
 export interface QueueItem {
   id: number;

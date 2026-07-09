@@ -10,6 +10,7 @@ const STATUS_LABEL: Record<string, string> = {
   pending: 'Pending',
   calling: 'Calling…',
   completed: 'Completed',
+  'no-answer': 'No Answer',
   failed: 'Failed',
   skipped: 'Skipped',
 };
@@ -37,7 +38,9 @@ export function QueueTable({ items, onSkip, onRetry }: Props) {
             <td>{STATUS_LABEL[item.status] ?? item.status}</td>
             <td>
               {item.status === 'pending' && <button onClick={() => onSkip(item.id)}>Skip</button>}
-              {(item.status === 'failed' || item.status === 'skipped') && (
+              {(item.status === 'failed' ||
+                item.status === 'no-answer' ||
+                item.status === 'skipped') && (
                 <button onClick={() => onRetry(item.id)}>Retry</button>
               )}
             </td>

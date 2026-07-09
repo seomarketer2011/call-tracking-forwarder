@@ -30,7 +30,14 @@ export async function onRequestPost({ request, env }) {
   });
 
   if (queueId) {
-    const finalStatus = dialStatus === 'completed' ? 'completed' : 'failed';
+    // Business answered -> completed. Business didn't pick up -> no-answer
+    // (a distinct, retryable outcome). Everything else (busy, failed,
+    // canceled) -> failed.
+    let finalStatus;
+    if (dialStatus === 'completed') finalStatus = 'completed';
+    else if (dialStatus === 'no-answer') finalStatus = 'no-answer';
+    else finalStatus = 'failed';
+
     await env.DB.prepare(
       "UPDATE dial_queue SET status = ?, call_sid = ?, updated_at = ? WHERE id = ? AND status = 'calling'"
     )

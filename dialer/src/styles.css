@@ -111,6 +111,10 @@ button:disabled {
   background: #f1fbf1;
 }
 
+.status-no-answer {
+  background: #fff4e5;
+}
+
 .status-failed {
   background: #fdf1f1;
 }

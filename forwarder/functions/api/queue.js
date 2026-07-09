@@ -32,7 +32,9 @@ export async function onRequestPost({ request, env }) {
 
   const url = new URL(request.url);
   if (url.searchParams.get('clear') === 'done') {
-    await env.DB.prepare("DELETE FROM dial_queue WHERE status IN ('completed', 'failed', 'skipped')").run();
+    await env.DB.prepare(
+      "DELETE FROM dial_queue WHERE status IN ('completed', 'no-answer', 'failed', 'skipped')"
+    ).run();
     return json({ ok: true });
   }
 

@@ -70,12 +70,17 @@ All `/api/*` routes require header `X-Api-Key: <ADMIN_API_KEY>`.
 `/api/dial` rings the operator and passes a bridge URL. When the operator
 answers, `/voice/bridge` dials the business with a `<Dial action>` pointing
 at `/voice/dial-result`. That callback carries the *business* leg's
-`DialCallStatus`, so a queue item is marked `completed` only when the
-business actually answered — busy/no-answer/failed all become `failed` and
-show a **Retry** button in the desktop app. `/voice/dial-status` (the
-operator leg) is a race-safe backstop: it only resolves an item still in
-`calling` state, which covers the case where the operator never answered
-their own phone so the business was never dialed.
+`DialCallStatus`, which maps to the queue item's final status:
+
+- `completed` → **completed** (the business answered)
+- `no-answer` → **no-answer** (shown as "No Answer" in the app)
+- `busy` / `failed` / `canceled` → **failed**
+
+`no-answer`, `failed` and `skipped` items all show a **Retry** button in the
+desktop app. `/voice/dial-status` (the operator leg) is a race-safe backstop:
+it only resolves an item still in `calling` state, which covers the case where
+the operator never answered their own phone so the business was never dialed
+(that resolves to `failed`, not `no-answer`).
 
 ## How the round robin / sticky routing works
 
