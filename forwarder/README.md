@@ -35,8 +35,9 @@ Serves two things over one Cloudflare Pages project:
    In the Twilio console, on your UK number:
    - "A call comes in" → Webhook → `https://<your-pages-domain>/voice/inbound` → HTTP POST
 
-   Nothing else needs configuring on the Twilio side — `/voice/bridge` and `/voice/dial-status`
-   are set dynamically per-call by `/api/dial`.
+   Nothing else needs configuring on the Twilio side — `/voice/bridge`,
+   `/voice/dial-result` and `/voice/dial-status` are all set dynamically
+   per-call by `/api/dial` and the bridge TwiML.
 
 ## Local development
 
@@ -64,12 +65,35 @@ All `/api/*` routes require header `X-Api-Key: <ADMIN_API_KEY>`.
 - `DELETE /api/queue/:id`
 - `POST /api/dial` — `{ queueId }` — rings `OPERATOR_NUMBER`, then bridges to the queue item's number once answered
 
+### Outbound call outcome tracking
+
+`/api/dial` rings the operator and passes a bridge URL. When the operator
+answers, `/voice/bridge` dials the business with a `<Dial action>` pointing
+at `/voice/dial-result`. That callback carries the *business* leg's
+`DialCallStatus`, so a queue item is marked `completed` only when the
+business actually answered — busy/no-answer/failed all become `failed` and
+show a **Retry** button in the desktop app. `/voice/dial-status` (the
+operator leg) is a race-safe backstop: it only resolves an item still in
+`calling` state, which covers the case where the operator never answered
+their own phone so the business was never dialed.
+
 ## How the round robin / sticky routing works
 
 See `lib/db.js`. On each inbound call, `caller_mappings` is checked first
 (sticky). If the caller is new, the destination with the oldest
 `last_used_at` (or never used) is picked and the mapping is written —
-that's the round robin. Disabling a destination (`enabled: 0`) removes it
-from the pool for new callers, but a caller already stuck to it will hit
-the "no one available" message until re-pointed (delete their row from
-`caller_mappings` via D1 console to reset them).
+that's the round robin. Returning callers reuse their mapping and do *not*
+advance the round robin, so new callers stay evenly distributed.
+
+Disabling a destination (`enabled: 0`) removes it from the pool for new
+callers. A caller who was previously stuck to a now-disabled destination is
+automatically re-pointed to an active destination on their next call, and
+their mapping is updated to the new one (they then stay sticky to it). If
+*every* destination is disabled, callers hear the "no one available"
+message instead of the call dropping.
+
+Note on concurrency: two brand-new callers arriving at the exact same
+moment can occasionally be assigned the same destination, because D1 has no
+`SELECT ... FOR UPDATE` and the round-robin read/write isn't fully
+serialized. At personal-scale call volume this is rare and self-corrects on
+the next call; it's called out here rather than engineered around.

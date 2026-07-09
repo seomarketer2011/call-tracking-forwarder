@@ -16,6 +16,12 @@ export async function findDestinationForCaller(db, callerNumber) {
 // Picks the least-recently-used enabled destination, assigns it to the
 // caller (sticky), and bumps its last_used_at so the next new caller
 // round-robins to a different destination.
+//
+// The upsert (ON CONFLICT) matters for one case: a caller who was previously
+// stuck to a destination that has since been disabled. findDestinationForCaller
+// returns null for them (it filters on enabled = 1), so they land here with a
+// stale mapping row already present. We re-point them to an active destination
+// and overwrite the mapping instead of crashing on the primary-key conflict.
 export async function assignRoundRobinDestination(db, callerNumber) {
   const destination = await db
     .prepare(
@@ -34,7 +40,11 @@ export async function assignRoundRobinDestination(db, callerNumber) {
       .bind(now, destination.id),
     db
       .prepare(
-        'INSERT INTO caller_mappings (caller_number, destination_id, created_at) VALUES (?, ?, ?)'
+        `INSERT INTO caller_mappings (caller_number, destination_id, created_at)
+         VALUES (?, ?, ?)
+         ON CONFLICT(caller_number) DO UPDATE SET
+           destination_id = excluded.destination_id,
+           created_at = excluded.created_at`
       )
       .bind(callerNumber, destination.id, now),
   ]);

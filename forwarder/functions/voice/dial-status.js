@@ -1,6 +1,11 @@
 // Twilio status callback for the outbound dialer's initial (operator) leg.
 // Configured via statusCallback on the Calls.create request in functions/api/dial.js.
 // URL is called with ?queueId=<id>.
+//
+// This is a backstop for dial-result.js (the <Dial action> callback that knows
+// the target-leg outcome). The `WHERE status = 'calling'` guard means it only
+// resolves the queue item if dial-result hasn't already — e.g. when the operator
+// never answered their own phone, so the target was never dialed. First writer wins.
 
 import { xmlResponse, validateTwilioSignature, parseTwilioForm } from '../../lib/twilio.js';
 import { logCall } from '../../lib/db.js';
@@ -28,7 +33,9 @@ export async function onRequestPost({ request, env }) {
 
   if (queueId && TERMINAL_STATUSES.has(callStatus)) {
     const finalStatus = callStatus === 'completed' ? 'completed' : 'failed';
-    await env.DB.prepare('UPDATE dial_queue SET status = ?, call_sid = ?, updated_at = ? WHERE id = ?')
+    await env.DB.prepare(
+      "UPDATE dial_queue SET status = ?, call_sid = ?, updated_at = ? WHERE id = ? AND status = 'calling'"
+    )
       .bind(finalStatus, params.CallSid, new Date().toISOString(), Number(queueId))
       .run();
   }

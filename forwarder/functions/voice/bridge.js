@@ -25,6 +25,10 @@ export async function onRequestPost({ request, env }) {
       .run();
   }
 
-  const dialTwiml = `<Dial callerId="${xmlEscape(env.TWILIO_NUMBER)}" timeout="25"><Number>${xmlEscape(target)}</Number></Dial>`;
+  // The <Dial action> callback carries the *target* leg's DialCallStatus
+  // (answered / busy / no-answer / failed). That's the outcome we want to
+  // record for the queue item — the operator-leg statusCallback can't see it.
+  const actionUrl = `${url.origin}/voice/dial-result?queueId=${encodeURIComponent(queueId ?? '')}`;
+  const dialTwiml = `<Dial callerId="${xmlEscape(env.TWILIO_NUMBER)}" timeout="25" action="${xmlEscape(actionUrl)}" method="POST"><Number>${xmlEscape(target)}</Number></Dial>`;
   return xmlResponse(twiml(dialTwiml));
 }
