@@ -61,11 +61,33 @@ export async function onRequestPost({ request, env }) {
 
   const { leads, noPhone } = parseMapsResponse(data);
 
+  // Drop listings whose GBP number is actually one of this Twilio account's
+  // own numbers (e.g. a tracking number) — dialing those would call ourselves.
+  let ownNumbers = new Set();
+  try {
+    const twilioResp = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/IncomingPhoneNumbers.json?PageSize=100`,
+      {
+        headers: {
+          Authorization: 'Basic ' + btoa(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`),
+        },
+      }
+    );
+    if (twilioResp.ok) {
+      const twilioData = await twilioResp.json();
+      ownNumbers = new Set((twilioData.incoming_phone_numbers ?? []).map((n) => n.phone_number));
+    }
+  } catch {
+    // Filtering our own numbers is best-effort; a Twilio hiccup shouldn't fail the search.
+  }
+  const filtered = leads.filter((lead) => !ownNumbers.has(lead.number));
+  const excludedOwn = leads.length - filtered.length;
+
   // Flag leads already in the dial queue so the app can skip re-adding them.
   const existing = new Set(
     (await env.DB.prepare('SELECT number FROM dial_queue').all()).results.map((r) => r.number)
   );
-  const annotated = leads.map((lead) => ({ ...lead, inQueue: existing.has(lead.number) }));
+  const annotated = filtered.map((lead) => ({ ...lead, inQueue: existing.has(lead.number) }));
 
-  return json({ leads: annotated, noPhone, total: annotated.length });
+  return json({ leads: annotated, noPhone, excludedOwn, total: annotated.length });
 }
