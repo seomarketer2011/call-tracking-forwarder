@@ -7,6 +7,10 @@ Serves two things over one Cloudflare Pages project:
 
 ## One-time setup
 
+**Windows shortcut:** `powershell -ExecutionPolicy Bypass -File .\setup.ps1`
+runs every step below (login, D1 create, migrate, deploy, secrets) in one go,
+and `add-destination.ps1` covers step 4 of the main README. The manual steps:
+
 1. **Create the D1 database**
    ```
    npx wrangler d1 create call-tracking-db
