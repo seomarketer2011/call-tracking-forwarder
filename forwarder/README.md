@@ -31,9 +31,15 @@ and `add-destination.ps1` covers step 4 of the main README. The manual steps:
 4. **Set secrets** (Cloudflare dashboard → Pages project → Settings → Environment variables, or via `wrangler pages secret put`):
    - `TWILIO_ACCOUNT_SID`
    - `TWILIO_AUTH_TOKEN`
-   - `TWILIO_NUMBER` — your UK Twilio number, E.164 (`+44...`)
-   - `OPERATOR_NUMBER` — the real phone that should ring for outbound power-dials, E.164
+   - `TWILIO_NUMBER` — fallback caller ID, E.164 (`+44...`); normally the
+     runtime `outbound_caller_id` setting (set from the desktop app) wins
    - `ADMIN_API_KEY` — long random string; the desktop app sends this as `X-Api-Key`
+   - `TWILIO_API_KEY_SID` / `TWILIO_API_KEY_SECRET` — a Twilio API Key
+     (console → Account → API keys), used to sign softphone voice tokens
+   - `TWIML_APP_SID` — a TwiML App whose Voice URL is
+     `https://<your-pages-domain>/voice/client-outbound`; routes softphone calls
+   - `OPERATOR_NUMBER` — only needed for the legacy phone-mode `/api/dial`
+     flow (rings a real phone instead of the in-app softphone); optional
 
 5. **Configure your Twilio number**
    In the Twilio console, on your UK number:

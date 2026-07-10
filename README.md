@@ -8,8 +8,9 @@ both free-tier):
   destination numbers) and the outbound dialer's REST API. This is the one
   piece of infrastructure both apps below depend on.
 - **`dialer/`** — Windows desktop app (Tauri + React). Loads a CSV of
-  businesses/numbers and auto-dials them one at a time, ringing your real
-  phone first and bridging you to the target once you answer.
+  businesses/numbers and auto-dials them one at a time. The operator answers
+  in the app with a headset (Twilio Voice SDK softphone); when a call ends,
+  the next number dials automatically.
 
 ## How the forwarding works
 
@@ -24,11 +25,13 @@ both free-tier):
 ## How the dialer works
 
 1. You import a CSV of `business name, number` into the desktop app.
-2. Click Start Auto-Dial. The app calls `forwarder`'s `/api/dial` for the
-   next pending row.
-3. Twilio rings your real phone. When you answer, Twilio dials the business
-   number and bridges the two calls — you handle the conversation.
-4. When that call ends, the app automatically dials the next row.
+2. Click Connect Headset (the app is a WebRTC softphone), then Start
+   Auto-Dial.
+3. The app dials the next pending business through Twilio; the operator
+   talks through their headset. The business sees the caller ID chosen in
+   the app's Outbound Caller ID dropdown.
+4. When the call ends, the next row dials automatically after a short
+   breather.
 
 ## Setup order
 

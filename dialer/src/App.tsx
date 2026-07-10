@@ -1,26 +1,34 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { QueueItem, Settings } from './types';
 import { loadSettings, saveSettings } from './settings';
-import { clearFinishedQueue, fetchQueue, importQueue, triggerDial, updateQueueItem } from './api';
+import { clearFinishedQueue, fetchQueue, importQueue, updateQueueItem } from './api';
+import { Softphone, SoftphoneState } from './softphone';
 import { SettingsPanel } from './components/SettingsPanel';
 import { CallerIdPanel } from './components/CallerIdPanel';
 import { CsvImport } from './components/CsvImport';
 import { QueueTable } from './components/QueueTable';
 
 const POLL_MS = 4000;
+// Breather between calls so the operator can finish notes before the next dial.
+const NEXT_CALL_DELAY_MS = 2000;
 
 export default function App() {
   const [settings, setSettings] = useState<Settings>(loadSettings());
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [autoDialing, setAutoDialing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [phoneState, setPhoneState] = useState<SoftphoneState>('offline');
+  const [phoneDetail, setPhoneDetail] = useState<string>('');
+  const [cooldown, setCooldown] = useState(false);
+
+  const softphone = useRef<Softphone | null>(null);
   const dialInFlight = useRef(false);
+  const activeQueueId = useRef<number | null>(null);
 
   const refresh = useCallback(async () => {
     if (!settings.apiUrl || !settings.apiKey) return;
     try {
-      const items = await fetchQueue(settings);
-      setQueue(items);
+      setQueue(await fetchQueue(settings));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -33,39 +41,77 @@ export default function App() {
     return () => clearInterval(interval);
   }, [refresh]);
 
-  const dialNext = useCallback(
+  // (Re)create the softphone when settings change; tear down on unmount.
+  useEffect(() => {
+    softphone.current?.stop();
+    softphone.current = new Softphone(settings, {
+      onStateChange: (state, detail) => {
+        setPhoneState(state);
+        setPhoneDetail(detail ?? '');
+      },
+      onCallEnded: () => {
+        activeQueueId.current = null;
+        setCooldown(true);
+        setTimeout(() => {
+          setCooldown(false);
+          refresh();
+        }, NEXT_CALL_DELAY_MS);
+      },
+    });
+    return () => softphone.current?.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings]);
+
+  const connectHeadset = useCallback(async () => {
+    try {
+      await softphone.current?.start();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, []);
+
+  const dialItem = useCallback(
     async (item: QueueItem) => {
-      if (dialInFlight.current) return;
+      const phone = softphone.current;
+      if (!phone || phone.inCall || dialInFlight.current) return;
       dialInFlight.current = true;
       try {
-        await triggerDial(settings, item.id);
+        activeQueueId.current = item.id;
+        await phone.dial(item.number, item.id);
       } catch (err) {
+        activeQueueId.current = null;
         setError(err instanceof Error ? err.message : String(err));
       } finally {
         dialInFlight.current = false;
-        refresh();
+        setTimeout(refresh, 500);
       }
     },
-    [settings, refresh]
+    [refresh]
   );
 
-  // Auto-dial loop: whenever nothing is currently "calling" and auto-dial is
-  // on, kick off the next pending item. A real person handles the actual
-  // conversation once bridged — this just keeps the queue moving.
+  // Auto-dial loop: headset connected, no active call, not cooling down ->
+  // dial the next pending item. The human just talks; this keeps it moving.
   useEffect(() => {
-    if (!autoDialing) return;
-    const calling = queue.some((q) => q.status === 'calling');
-    if (calling || dialInFlight.current) return;
+    if (!autoDialing || cooldown) return;
+    if (phoneState !== 'ready') return;
+    if (dialInFlight.current || softphone.current?.inCall) return;
     const next = queue.find((q) => q.status === 'pending');
     if (!next) {
       setAutoDialing(false);
       return;
     }
-    dialNext(next);
-  }, [autoDialing, queue, dialNext]);
+    dialItem(next);
+  }, [autoDialing, cooldown, phoneState, queue, dialItem]);
 
   const pendingCount = queue.filter((q) => q.status === 'pending').length;
-  const callingItem = queue.find((q) => q.status === 'calling');
+
+  const phoneLabel: Record<SoftphoneState, string> = {
+    offline: 'Headset not connected',
+    ready: 'Ready',
+    connecting: `Dialing ${phoneDetail}…`,
+    'in-call': `In call with ${phoneDetail}`,
+    error: `Error: ${phoneDetail}`,
+  };
 
   return (
     <div className="app">
@@ -92,26 +138,35 @@ export default function App() {
       <div className="panel">
         <h2>Dialer</h2>
         <p className="hint">
-          {pendingCount} pending &middot; {callingItem ? `currently calling ${callingItem.number}` : 'idle'}
+          <strong>{phoneLabel[phoneState]}</strong> &middot; {pendingCount} pending
         </p>
         <div className="controls">
+          {phoneState === 'offline' || phoneState === 'error' ? (
+            <button onClick={connectHeadset}>Connect Headset</button>
+          ) : null}
           <button
-            disabled={autoDialing || pendingCount === 0}
+            disabled={phoneState !== 'ready' || autoDialing || pendingCount === 0}
             onClick={() => setAutoDialing(true)}
           >
             Start Auto-Dial
           </button>
           <button disabled={!autoDialing} onClick={() => setAutoDialing(false)}>
-            Stop
+            Stop After This Call
           </button>
           <button
-            disabled={autoDialing || pendingCount === 0 || !!callingItem}
+            disabled={phoneState !== 'ready' || autoDialing || pendingCount === 0}
             onClick={() => {
               const next = queue.find((q) => q.status === 'pending');
-              if (next) dialNext(next);
+              if (next) dialItem(next);
             }}
           >
             Call Next
+          </button>
+          <button
+            disabled={phoneState !== 'in-call' && phoneState !== 'connecting'}
+            onClick={() => softphone.current?.hangUp()}
+          >
+            Hang Up
           </button>
           <button
             onClick={async () => {
@@ -119,7 +174,7 @@ export default function App() {
               refresh();
             }}
           >
-            Clear Completed/Failed/Skipped
+            Clear Finished
           </button>
         </div>
       </div>
@@ -128,6 +183,7 @@ export default function App() {
         <h2>Queue</h2>
         <QueueTable
           items={queue}
+          activeCallQueueId={activeQueueId.current}
           onSkip={async (id) => {
             await updateQueueItem(settings, id, 'skipped');
             refresh();

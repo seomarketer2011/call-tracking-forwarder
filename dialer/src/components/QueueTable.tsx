@@ -2,6 +2,7 @@ import type { QueueItem } from '../types';
 
 interface Props {
   items: QueueItem[];
+  activeCallQueueId: number | null;
   onSkip: (id: number) => void;
   onRetry: (id: number) => void;
 }
@@ -15,7 +16,7 @@ const STATUS_LABEL: Record<string, string> = {
   skipped: 'Skipped',
 };
 
-export function QueueTable({ items, onSkip, onRetry }: Props) {
+export function QueueTable({ items, activeCallQueueId, onSkip, onRetry }: Props) {
   if (items.length === 0) {
     return <p className="hint">No numbers loaded yet — import a CSV to get started.</p>;
   }
@@ -42,6 +43,11 @@ export function QueueTable({ items, onSkip, onRetry }: Props) {
                 item.status === 'no-answer' ||
                 item.status === 'skipped') && (
                 <button onClick={() => onRetry(item.id)}>Retry</button>
+              )}
+              {item.status === 'calling' && item.id !== activeCallQueueId && (
+                // Stuck in 'calling' but no live call in this app — e.g. the
+                // app was closed mid-call. Let the operator requeue it.
+                <button onClick={() => onRetry(item.id)}>Reset</button>
               )}
             </td>
           </tr>

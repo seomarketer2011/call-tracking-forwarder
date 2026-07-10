@@ -1,10 +1,15 @@
 # Call Maker Dialer (Windows desktop app)
 
 A Tauri + React desktop app for loading a list of businesses and numbers and
-auto-dialing them one at a time. It doesn't handle the conversation — it
-rings your real phone (`OPERATOR_NUMBER` configured on the forwarder
-backend), and once you answer, Twilio dials the target and bridges you in.
-The app just keeps the queue moving.
+auto-dialing them one at a time. The operator answers **in the app with a
+headset** — it's a softphone built on the Twilio Voice SDK (WebRTC). Click
+"Connect Headset" once (grant microphone access when prompted), then
+Start Auto-Dial: each call connects through the headset, and when it ends
+the next number dials automatically after a 2-second breather.
+
+There is also a legacy "phone mode" on the backend (`/api/dial` rings a real
+phone configured as `OPERATOR_NUMBER` and bridges) — the app no longer uses
+it, but the endpoints remain if you ever want a fallback.
 
 ## Prerequisites
 
@@ -32,8 +37,16 @@ plain HTTPS/fetch, so a browser works fine for UI development.
 ## First run
 
 1. Open Settings, enter your forwarder's Pages URL (e.g. `https://your-project.pages.dev`) and the `ADMIN_API_KEY` you set on the backend.
-2. Import a CSV under "Import Numbers" — columns `business name` and `number` (header row optional; UK numbers only, `0...` and `+44...` both accepted and normalized).
-3. Click **Start Auto-Dial**. The app calls `/api/dial` for the next pending row, which rings your phone; once you answer, Twilio bridges you to the business. When that call ends, the app automatically moves to the next row. Use **Stop** to pause, **Skip** to jump a row, **Retry** to requeue a failed/skipped one.
+2. Pick an **Outbound Caller ID** from the dropdown (it lists the Twilio
+   account's numbers) — calls won't place without one.
+3. Import a CSV under "Import Numbers" — columns `business name` and `number` (header row optional; UK numbers only, `0...` and `+44...` both accepted and normalized).
+4. Click **Connect Headset** and allow microphone access when Windows/the
+   webview prompts.
+5. Click **Start Auto-Dial**. Calls connect in the app through your headset;
+   when one ends, the next dials automatically. **Stop After This Call**
+   pauses the loop, **Hang Up** ends the current call, **Skip**/**Retry**
+   manage individual rows, and **Reset** requeues a row stuck in "Calling"
+   (e.g. after the app was closed mid-call).
 
 ## Building the Windows installer
 

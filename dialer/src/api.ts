@@ -61,6 +61,10 @@ export function triggerDial(settings: Settings, queueId: number): Promise<{ call
   });
 }
 
+export function fetchVoiceToken(settings: Settings): Promise<{ token: string; identity: string; ttl: number }> {
+  return request(settings, '/api/voice-token');
+}
+
 export function fetchTwilioNumbers(settings: Settings): Promise<{ number: string; label: string }[]> {
   return request(settings, '/api/twilio-numbers');
 }
