@@ -65,6 +65,26 @@ export function fetchVoiceToken(settings: Settings): Promise<{ token: string; id
   return request(settings, '/api/voice-token');
 }
 
+export interface Lead {
+  businessName: string;
+  number: string;
+  category: string;
+  rating: number | null;
+  address: string;
+  inQueue: boolean;
+}
+
+export function searchLeads(
+  settings: Settings,
+  query: string,
+  limit = 100
+): Promise<{ leads: Lead[]; noPhone: number; total: number }> {
+  return request(settings, '/api/lead-search', {
+    method: 'POST',
+    body: JSON.stringify({ query, limit }),
+  });
+}
+
 export function fetchTwilioNumbers(settings: Settings): Promise<{ number: string; label: string }[]> {
   return request(settings, '/api/twilio-numbers');
 }

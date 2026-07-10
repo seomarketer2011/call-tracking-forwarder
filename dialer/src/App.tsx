@@ -6,6 +6,7 @@ import { Softphone, SoftphoneState } from './softphone';
 import { SettingsPanel } from './components/SettingsPanel';
 import { CallerIdPanel } from './components/CallerIdPanel';
 import { CsvImport } from './components/CsvImport';
+import { LeadFinder } from './components/LeadFinder';
 import { QueueTable } from './components/QueueTable';
 
 const POLL_MS = 4000;
@@ -127,6 +128,14 @@ export default function App() {
       />
 
       <CallerIdPanel settings={settings} />
+
+      <LeadFinder
+        settings={settings}
+        onImport={async (rows) => {
+          await importQueue(settings, rows);
+          refresh();
+        }}
+      />
 
       <CsvImport
         onImport={async (rows) => {

@@ -54,6 +54,15 @@ input[type='password'] {
   font-size: 14px;
 }
 
+.lead-query {
+  flex: 1;
+  min-width: 260px;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
 select {
   padding: 8px 10px;
   border: 1px solid #ccc;

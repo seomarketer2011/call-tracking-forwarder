@@ -40,6 +40,9 @@ and `add-destination.ps1` covers step 4 of the main README. The manual steps:
      `https://<your-pages-domain>/voice/client-outbound`; routes softphone calls
    - `OPERATOR_NUMBER` — only needed for the legacy phone-mode `/api/dial`
      flow (rings a real phone instead of the in-app softphone); optional
+   - `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD` — dataforseo.com API
+     credentials; only needed for the Lead Finder (`/api/lead-search`),
+     which returns a clear error until they're set
 
 5. **Configure your Twilio number**
    In the Twilio console, on your UK number:
@@ -73,7 +76,11 @@ All `/api/*` routes require header `X-Api-Key: <ADMIN_API_KEY>`.
 - `POST /api/queue?clear=done` — remove completed/failed/skipped rows
 - `PATCH /api/queue/:id` — `{ status }`
 - `DELETE /api/queue/:id`
-- `POST /api/dial` — `{ queueId }` — rings `OPERATOR_NUMBER`, then bridges to the queue item's number once answered
+- `POST /api/dial` — `{ queueId }` — legacy phone mode: rings `OPERATOR_NUMBER`, then bridges to the queue item's number once answered
+- `GET  /api/voice-token` — Twilio Voice access token for the desktop softphone
+- `GET  /api/twilio-numbers` — the account's numbers (caller-ID dropdown)
+- `GET/PUT /api/settings` — runtime settings (`outbound_caller_id`)
+- `POST /api/lead-search` — `{ query, limit? }` — Google Maps/GBP listings via DataForSEO, normalized to dialable UK leads
 
 ### Outbound call outcome tracking
 
