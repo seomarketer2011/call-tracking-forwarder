@@ -46,6 +46,9 @@ targets). Two options:
   installer lands in `src-tauri/target/release/bundle/msi/` and `/nsis/`.
 - **CI**: `.github/workflows/build-dialer.yml` builds it on `windows-latest`
   automatically on push and uploads the `.msi`/`.exe` as a build artifact.
+  Download it from GitHub → Actions → the latest "Build Dialer (Windows)"
+  run → Artifacts → `call-maker-dialer-windows` (artifacts expire after
+  90 days; re-run the workflow to rebuild).
 
 ## Notes
 
