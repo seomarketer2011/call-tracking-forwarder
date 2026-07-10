@@ -5,4 +5,4 @@ pages_build_output_dir = "public"
 [[d1_databases]]
 binding = "DB"
 database_name = "call-tracking-db"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "393adb3a-c723-4af3-b205-6b5cf677030d"
