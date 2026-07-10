@@ -3,6 +3,7 @@
 // URL is called with ?target=<E.164 number>&queueId=<id>.
 
 import { xmlResponse, twiml, xmlEscape, validateTwilioSignature, parseTwilioForm } from '../../lib/twilio.js';
+import { getSetting } from '../../lib/db.js';
 
 export async function onRequestPost({ request, env }) {
   const params = await parseTwilioForm(request);
@@ -25,10 +26,14 @@ export async function onRequestPost({ request, env }) {
       .run();
   }
 
+  // The business sees the same runtime-configurable caller ID that rang the
+  // operator (see functions/api/dial.js).
+  const callerId = (await getSetting(env.DB, 'outbound_caller_id')) || env.TWILIO_NUMBER;
+
   // The <Dial action> callback carries the *target* leg's DialCallStatus
   // (answered / busy / no-answer / failed). That's the outcome we want to
   // record for the queue item — the operator-leg statusCallback can't see it.
   const actionUrl = `${url.origin}/voice/dial-result?queueId=${encodeURIComponent(queueId ?? '')}`;
-  const dialTwiml = `<Dial callerId="${xmlEscape(env.TWILIO_NUMBER)}" timeout="25" action="${xmlEscape(actionUrl)}" method="POST"><Number>${xmlEscape(target)}</Number></Dial>`;
+  const dialTwiml = `<Dial callerId="${xmlEscape(callerId)}" timeout="25" action="${xmlEscape(actionUrl)}" method="POST"><Number>${xmlEscape(target)}</Number></Dial>`;
   return xmlResponse(twiml(dialTwiml));
 }

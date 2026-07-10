@@ -3,6 +3,7 @@ import type { QueueItem, Settings } from './types';
 import { loadSettings, saveSettings } from './settings';
 import { clearFinishedQueue, fetchQueue, importQueue, triggerDial, updateQueueItem } from './api';
 import { SettingsPanel } from './components/SettingsPanel';
+import { CallerIdPanel } from './components/CallerIdPanel';
 import { CsvImport } from './components/CsvImport';
 import { QueueTable } from './components/QueueTable';
 
@@ -78,6 +79,8 @@ export default function App() {
           saveSettings(s);
         }}
       />
+
+      <CallerIdPanel settings={settings} />
 
       <CsvImport
         onImport={async (rows) => {

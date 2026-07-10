@@ -7,6 +7,7 @@
 
 import { requireApiKey, unauthorized } from '../../lib/auth.js';
 import { createCall } from '../../lib/twilio.js';
+import { getSetting } from '../../lib/db.js';
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -34,12 +35,16 @@ export async function onRequestPost({ request, env }) {
     .bind('calling', new Date().toISOString(), queueId)
     .run();
 
+  // Caller ID is runtime-configurable from the desktop app (must be a number
+  // the Twilio account owns); TWILIO_NUMBER is the fallback.
+  const callerId = (await getSetting(env.DB, 'outbound_caller_id')) || env.TWILIO_NUMBER;
+
   try {
     const call = await createCall({
       accountSid: env.TWILIO_ACCOUNT_SID,
       authToken: env.TWILIO_AUTH_TOKEN,
       to: env.OPERATOR_NUMBER,
-      from: env.TWILIO_NUMBER,
+      from: callerId,
       url: bridgeUrl,
       statusCallback,
     });

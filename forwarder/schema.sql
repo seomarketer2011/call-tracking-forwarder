@@ -40,6 +40,14 @@ CREATE TABLE IF NOT EXISTS dial_queue (
   updated_at TEXT
 );
 
+-- Small key/value store for runtime-changeable settings (e.g. which of the
+-- account's Twilio numbers to use as outbound caller ID).
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_destinations_roundrobin
   ON destinations (enabled, last_used_at);
 

@@ -52,6 +52,24 @@ export async function assignRoundRobinDestination(db, callerNumber) {
   return destination;
 }
 
+export async function getSetting(db, key) {
+  const row = await db
+    .prepare('SELECT value FROM app_settings WHERE key = ?')
+    .bind(key)
+    .first();
+  return row ? row.value : null;
+}
+
+export async function setSetting(db, key, value) {
+  await db
+    .prepare(
+      `INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+    )
+    .bind(key, value, new Date().toISOString())
+    .run();
+}
+
 export async function logCall(db, { direction, from, to, callSid, status }) {
   await db
     .prepare(

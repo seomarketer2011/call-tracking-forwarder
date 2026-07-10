@@ -60,3 +60,18 @@ export function triggerDial(settings: Settings, queueId: number): Promise<{ call
     body: JSON.stringify({ queueId }),
   });
 }
+
+export function fetchTwilioNumbers(settings: Settings): Promise<{ number: string; label: string }[]> {
+  return request(settings, '/api/twilio-numbers');
+}
+
+export function fetchServerSettings(settings: Settings): Promise<{ outbound_caller_id: string | null }> {
+  return request(settings, '/api/settings');
+}
+
+export function saveCallerId(settings: Settings, callerId: string): Promise<{ outbound_caller_id: string | null }> {
+  return request(settings, '/api/settings', {
+    method: 'PUT',
+    body: JSON.stringify({ outbound_caller_id: callerId }),
+  });
+}
